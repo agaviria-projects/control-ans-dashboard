@@ -17,8 +17,11 @@ ENV/
 *.bak
 
 # ────────────────────────────────
-# 📊 EXCEL Y CSV (no se suben archivos pesados)
+# 📊 EXCEL Y CSV
+# (permitir data/* porque Streamlit Cloud los necesita)
 # ────────────────────────────────
+
+# Ignorar Excel globalmente (fuera de data/)
 *.xlsx
 *.xlsm
 *.xlsb
@@ -26,9 +29,10 @@ ENV/
 *.xls
 *.ods
 
-# Mantener solo plantillas si quieres
-!plantilla*.xlsx
-!plantilla*.xlsm
+# PERMITIR Excel dentro de /data
+!data/
+!data/*.xlsx
+!data/*.xlsm
 
 # ────────────────────────────────
 # 🧠 JUPYTER
