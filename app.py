@@ -267,7 +267,6 @@ with tab2:
 
 
 # TAB 3 — MAPA
-# TAB 3 — MAPA
 with tab3:
     st.subheader("🗺️ Mapa ANS geolocalizado")
 
@@ -275,42 +274,42 @@ with tab3:
     from folium.plugins import Fullscreen
     from streamlit_folium import st_folium
 
-    # ================
+    # ============================
     # INPUT CONTROLADO REAL
-    # ================
+    # ============================
     if "buscar_pedido" not in st.session_state:
         st.session_state.buscar_pedido = ""
 
     st.text_input("🔍 Buscar pedido:", key="buscar_pedido")
 
-    # ================
-    # VALIDAR COORDINADAS
-    # ================
-    if not {"X","Y"}.issubset(df_f.columns):
+    # ============================
+    # VALIDAR COORDENADAS
+    # ============================
+    if not {"X", "Y"}.issubset(df_f.columns):
         st.warning("⚠️ No existen columnas X/Y válidas.")
         st.stop()
 
-    # ================
-    # BASE DE MAPA
-    # ================
-    df_map = df_f.dropna(subset=["X","Y"]).copy()
+    # ============================
+    # BASE DEL MAPA
+    # ============================
+    df_map = df_f.dropna(subset=["X", "Y"]).copy()
     pedido_encontrado = None
     bus = st.session_state.buscar_pedido.strip()
 
-    # ================
-    # FILTRAR SOLO SI HAY BÚSQUEDA
-    # ================
+    # ============================
+    # FILTRO POR PEDIDO
+    # ============================
     if bus != "":
-        df_bus = df_map[df_map["PEDIDO"].astype(str)==bus]
+        df_bus = df_map[df_map["PEDIDO"].astype(str) == bus]
         if df_bus.empty:
             st.warning("⚠️ Pedido no encontrado.")
             st.stop()
         df_map = df_bus
         pedido_encontrado = df_bus.iloc[0]
 
-    # ================
+    # ============================
     # CENTRAR MAPA
-    # ================
+    # ============================
     if pedido_encontrado is not None:
         lat_c = float(pedido_encontrado["Y"])
         lon_c = float(pedido_encontrado["X"])
@@ -320,30 +319,30 @@ with tab3:
         lon_c = df_map["X"].mean()
         zoom = 12
 
-    # ================
-    # MAPA DETALLADO ROSADITO (OSM Bright)
-    # ================
+    # ============================
+    # MAPA PROFESIONAL — CARTO VOYAGER (SIN AUTENTICACIÓN)
+    # ============================
     m = folium.Map(
         location=[lat_c, lon_c],
         zoom_start=zoom,
-        tiles="https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}.png",
-        attr="Stadia Maps © OpenMapTiles © OpenStreetMap contributors"
+        tiles="https://cartodb-basemaps-a.global.ssl.fastly.net/rastertiles/voyager/{z}/{x}/{y}.png",
+        attr="© CARTO © OpenStreetMap contributors"
     )
 
     Fullscreen().add_to(m)
 
-    # ================
-    # ICONOS
-    # ================
+    # ============================
+    # ICONOS PERSONALIZADOS (GOTAS)
+    # ============================
     def color_hex(estado):
-        colores={
-            "A TIEMPO":"#28a745",
-            "ALERTA":"#ffc107",
-            "ALERTA_0":"#fd7e14",
-            "VENCIDO":"#dc3545",
-            "SIN FECHA":"#0d6efd"
+        colores = {
+            "A TIEMPO": "#28a745",
+            "ALERTA": "#ffc107",
+            "ALERTA_0": "#fd7e14",
+            "VENCIDO": "#dc3545",
+            "SIN FECHA": "#0d6efd"
         }
-        return colores.get(estado,"#8e8e8e")
+        return colores.get(estado, "#8e8e8e")
 
     def crear_icono(color):
         return folium.DivIcon(html=f"""
@@ -354,9 +353,9 @@ with tab3:
         </svg>
         """)
 
-    # ================
+    # ============================
     # MARCADORES
-    # ================
+    # ============================
     for _, r in df_map.iterrows():
         popup = f"""
         <b>Pedido:</b> {r['PEDIDO']}<br>
@@ -372,3 +371,5 @@ with tab3:
         ).add_to(m)
 
     st_folium(m, width=1100, height=600)
+
+
