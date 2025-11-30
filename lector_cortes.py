@@ -1,23 +1,23 @@
-import os
 from pathlib import Path
 
-RUTA_BASE = Path(r"D:\CONTROL_ANS_INF")
-
 def obtener_ultimo_corte():
-    carpetas = [c for c in RUTA_BASE.iterdir() if c.is_dir()]
-    if not carpetas:
-        raise Exception("No hay carpetas de fechas en CONTROL_ANS_INF")
+    # Ruta base SIEMPRE relativa al proyecto
+    RUTA_BASE = Path("data")
 
-    carpeta_reciente = max(carpetas, key=lambda x: x.stat().st_mtime)
+    if not RUTA_BASE.exists():
+        raise Exception("❌ La carpeta 'data' no existe en el proyecto.")
 
-    archivos = list(carpeta_reciente.glob("*.xlsx"))
+    # Buscar archivos .xlsx dentro de /data
+    archivos = list(RUTA_BASE.glob("*.xlsx"))
     if not archivos:
-        raise Exception(f"No hay archivos en la carpeta {carpeta_reciente}")
+        raise Exception("❌ No hay archivos .xlsx en la carpeta 'data'.")
 
+    # Tomar el archivo más reciente
     archivo_reciente = max(archivos, key=lambda x: x.stat().st_mtime)
     return archivo_reciente
 
-# ======== PRUEBA ========
+
+# ===== PRUEBA LOCAL =====
 if __name__ == "__main__":
     ruta = obtener_ultimo_corte()
     print("📌 Último corte encontrado:")
