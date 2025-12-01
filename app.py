@@ -195,7 +195,7 @@ tab1, tab2, tab3 = st.tabs(["📄 Vista de Datos", "📊 Gráficas ANS", "🗺�
 
 # TAB 1 — DATOS
 with tab1:
-    st.subheader("📄 Vista previa de DATOS_ANS (filtrado)")
+    st.subheader("📄 Vista de DATOS_ANS")
     styled_df = estilo_bordes(df_f).applymap(color_estado, subset=["ESTADO"])
     st.dataframe(styled_df, use_container_width=True)
 
