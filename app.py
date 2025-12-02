@@ -12,13 +12,19 @@ st.title("📊 Dashboard Control ANS")
 # ======================================
 # OBTENER ARCHIVO MÁS RECIENTE
 # ======================================
+from datetime import datetime
+
 try:
     ruta_excel = obtener_ultimo_corte()
+
+    # Fecha de modificación del archivo
+    fecha_mod = datetime.fromtimestamp(ruta_excel.stat().st_mtime)
+    fecha_formateada = fecha_mod.strftime("%d/%m/%Y %I:%M %p").lower()
 
     st.markdown(
         f"""
         <div style='font-size:14px; color:#6c757d; margin-bottom:20px;'>
-            📌 Corte activo → <b>{ruta_excel.name}</b>
+            📌 <b>Informe ANS actualizado</b> ({fecha_formateada})
         </div>
         """,
         unsafe_allow_html=True
