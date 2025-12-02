@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from lector_cortes import obtener_ultimo_corte
 import plotly.express as px
+from datetime import datetime, timedelta, timezone
 
 # ======================================
 # CONFIGURACIÓN DEL DASHBOARD
@@ -10,16 +11,22 @@ st.set_page_config(page_title="Dashboard ANS", layout="wide")
 st.title("📊 Dashboard Control ANS")
 
 # ======================================
-# OBTENER ARCHIVO MÁS RECIENTE
+# OBTENER ARCHIVO MÁS RECIENTE + FECHA
 # ======================================
-from datetime import datetime
-
 try:
     ruta_excel = obtener_ultimo_corte()
 
-    # Fecha de modificación del archivo
-    fecha_mod = datetime.fromtimestamp(ruta_excel.stat().st_mtime)
-    fecha_formateada = fecha_mod.strftime("%d/%m/%Y %I:%M %p").lower()
+    # Convertir timestamp del archivo a UTC
+    fecha_mod_utc = datetime.fromtimestamp(
+        ruta_excel.stat().st_mtime,
+        tz=timezone.utc
+    )
+
+    # Convertir a hora de Colombia (UTC-5)
+    fecha_mod_col = fecha_mod_utc - timedelta(hours=5)
+
+    # Formato visible para usuario
+    fecha_formateada = fecha_mod_col.strftime("%d/%m/%Y %I:%M %p").lower()
 
     st.markdown(
         f"""
@@ -34,6 +41,7 @@ except Exception as e:
     st.error(f"❌ Error cargando archivo: {str(e)}")
     st.stop()
 
+
 # ======================================
 # LEER DATOS_ANS
 # ======================================
@@ -42,7 +50,7 @@ try:
     df = df.loc[:, ~df.columns.str.contains("Unnamed")]
     df.reset_index(drop=True, inplace=True)
 
-    # NORMALIZAR NOMBRES DE COLUMNAS
+    # NORMALIZAR NOMBRES
     df.columns = (
         df.columns.str.strip()
                   .str.upper()
@@ -54,7 +62,6 @@ try:
         "COORDENADA_X": "X",
         "LONGITUD": "X",
         "LON": "X",
-
         "COORDENADAY": "Y",
         "COORDENADA_Y": "Y",
         "LATITUD": "Y",
@@ -63,36 +70,23 @@ try:
 
     df.rename(columns=rename_dict, inplace=True)
 
-    # Convertir coordenadas coma → punto
     df["X"] = pd.to_numeric(df["X"].astype(str).str.replace(",", "."), errors="coerce")
     df["Y"] = pd.to_numeric(df["Y"].astype(str).str.replace(",", "."), errors="coerce")
 
-    # ======================================================
-    # NORMALIZACIÓN DEFINITIVA DE ESTADOS (CORRECCIÓN COLOR)
-    # ======================================================
+    # ===== NORMALIZACIÓN DE ESTADOS =====
     def normalizar_estado(x):
         x = str(x).strip().upper()
 
-        # ALERTA_0 en todas sus variantes
         if "ALERTA_0" in x:
             return "ALERTA_0"
-
-        # A TIEMPO
         if "A TIEMPO" in x or "ATIEMPO" in x:
             return "A TIEMPO"
-
-        # VENCIDO
         if "VENCIDO" in x:
             return "VENCIDO"
-
-        # ALERTA (que no sea alerta 0)
         if "ALERTA" in x and "0" not in x:
             return "ALERTA"
-
-        # SIN FECHA
         if "SIN FECHA" in x:
             return "SIN FECHA"
-
         return x
 
     df["ESTADO"] = df["ESTADO"].apply(normalizar_estado)
@@ -140,6 +134,7 @@ def estilo_bordes(df):
              "props": [("background-color", "white")]}
         ]
     )
+
 
 # ======================================
 # FILTROS
@@ -194,6 +189,7 @@ k4.markdown(tarjeta_kpi("#fd7e14", "Alerta 0 días", alerta0, "🟠"), unsafe_al
 k5.markdown(tarjeta_kpi("#dc3545", "Vencidos", vencido, "🔴"), unsafe_allow_html=True)
 k6.markdown(tarjeta_kpi("#0d6efd", "Sin fecha", sinfecha, "🔵"), unsafe_allow_html=True)
 
+
 # ======================================
 # TABS PRINCIPALES
 # ======================================
@@ -208,9 +204,6 @@ with tab1:
 # TAB 2 — GRÁFICAS
 with tab2:
     st.subheader("📊 Gráficas ANS")
-
-    import plotly.express as px
-    import plotly.graph_objects as go
 
     df_estado = df_f["ESTADO"].value_counts().reset_index()
     df_estado.columns = ["ESTADO", "CANTIDAD"]
@@ -230,6 +223,7 @@ with tab2:
     fig_estado.update_layout(template="plotly_white")
     st.plotly_chart(fig_estado, use_container_width=True)
 
+
     st.subheader("🏙️ Distribución por Municipio")
     if "MUNICIPIO" in df_f.columns:
         df_mun = df_f["MUNICIPIO"].value_counts().reset_index()
@@ -242,28 +236,20 @@ with tab2:
             title="Cantidad de pedidos por Municipio",
             color_discrete_sequence=px.colors.qualitative.Set2
         )
-        fig_mun.update_layout(
-            template="plotly_white",
-            xaxis_tickangle=-45,
-            showlegend=False
-        )
-
+        fig_mun.update_layout(template="plotly_white", xaxis_tickangle=-45, showlegend=False)
         st.plotly_chart(fig_mun, use_container_width=True)
 
+
     st.subheader("🥧 Distribución porcentual ANS")
+    import plotly.graph_objects as go
+
     fig_pie = go.Figure(
         data=[go.Pie(
             labels=df_estado["ESTADO"],
             values=df_estado["CANTIDAD"],
             hole=0.45,
             marker=dict(
-                colors=[
-                    "#28a745",
-                    "#ffc107",
-                    "#fd7e14",
-                    "#dc3545",
-                    "#0d6efd"
-                ],
+                colors=["#28a745", "#ffc107", "#fd7e14", "#dc3545", "#0d6efd"],
                 line=dict(color="white", width=2)
             )
         )]
@@ -280,31 +266,20 @@ with tab3:
     from folium.plugins import Fullscreen
     from streamlit_folium import st_folium
 
-    # ============================
-    # INPUT CONTROLADO REAL
-    # ============================
     if "buscar_pedido" not in st.session_state:
         st.session_state.buscar_pedido = ""
 
     st.text_input("🔍 Buscar pedido:", key="buscar_pedido")
 
-    # ============================
-    # VALIDAR COORDENADAS
-    # ============================
-    if not {"X", "Y"}.issubset(df_f.columns):
+    if not {"X","Y"}.issubset(df_f.columns):
         st.warning("⚠️ No existen columnas X/Y válidas.")
         st.stop()
 
-    # ============================
-    # BASE DEL MAPA
-    # ============================
-    df_map = df_f.dropna(subset=["X", "Y"]).copy()
+    df_map = df_f.dropna(subset=["X","Y"]).copy()
     pedido_encontrado = None
     bus = st.session_state.buscar_pedido.strip()
 
-    # ============================
-    # FILTRO POR PEDIDO
-    # ============================
+    # Si busca un pedido → filtrarlo directamente
     if bus != "":
         df_bus = df_map[df_map["PEDIDO"].astype(str) == bus]
         if df_bus.empty:
@@ -313,9 +288,6 @@ with tab3:
         df_map = df_bus
         pedido_encontrado = df_bus.iloc[0]
 
-    # ============================
-    # CENTRAR MAPA
-    # ============================
     if pedido_encontrado is not None:
         lat_c = float(pedido_encontrado["Y"])
         lon_c = float(pedido_encontrado["X"])
@@ -325,9 +297,6 @@ with tab3:
         lon_c = df_map["X"].mean()
         zoom = 12
 
-    # ============================
-    # MAPA PROFESIONAL — CARTO VOYAGER (SIN AUTENTICACIÓN)
-    # ============================
     m = folium.Map(
         location=[lat_c, lon_c],
         zoom_start=zoom,
@@ -337,9 +306,6 @@ with tab3:
 
     Fullscreen().add_to(m)
 
-    # ============================
-    # ICONOS PERSONALIZADOS (GOTAS)
-    # ============================
     def color_hex(estado):
         colores = {
             "A TIEMPO": "#28a745",
@@ -359,9 +325,6 @@ with tab3:
         </svg>
         """)
 
-    # ============================
-    # MARCADORES
-    # ============================
     for _, r in df_map.iterrows():
         popup = f"""
         <b>Pedido:</b> {r['PEDIDO']}<br>
@@ -370,6 +333,7 @@ with tab3:
         <b>Cliente:</b> {r.get('NOMBRE_CLIENTE','')}<br>
         <b>Municipio:</b> {r.get('MUNICIPIO','')}
         """
+
         folium.Marker(
             location=[r["Y"], r["X"]],
             popup=popup,
@@ -377,5 +341,3 @@ with tab3:
         ).add_to(m)
 
     st_folium(m, width=1100, height=600)
-
-
